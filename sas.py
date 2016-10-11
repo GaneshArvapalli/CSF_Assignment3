@@ -53,9 +53,8 @@ def createListOfCommands(lines):
         tempList = [cmd for line in tempList for cmd in line.split("\n")]
         tempList = [cmd for line in tempList for cmd in line.split()] 
         bigList.append(tempList)
-    bigList = [cmd for sublist in bigList for cmd in sublist]
-    #sum(bigList, []) #flattens the array
-    print(bigList)
+    bigList = [cmd for sublist in bigList for cmd in sublist] #flattens the array
+    return bigList
 
 
 def removeComments(fileName):
@@ -120,21 +119,34 @@ def run():
             break
 
 
-def addToMemory(commands):
+def getReferences(commands):
+    references = {} 
+    for i in range(len(commands)):
+        if ":" in commands[i]:
+            if i+1 < len(commands) and commands[i+1] == "DAT":
+                 references[commands[i]] = commands[i+2]
+    return references
+
+
+def addToMemory(commands, references):
     address = 0
     #print(bin(address & 0xff))
     for i in range(len(commands)):
         if ":" in commands[i]:
-            MEMORY[address] = commands[i]
             if i + 1 < len(commands) and "DAT" == commands[i+1]:
-                MEMORY[address] = commands[i+2]
+                try:
+                    MEMORY[address] = commands[i+2]
+                except:
+                    sys.stderr.write("Error! Memory cannot be written to!")
+            else:
+                MEMORY[address] = address & 0xffff
         elif commands[i] == "LDA":
             b = encoding[commands[i]] & 0xff
             b = b << 4
-            b += commands[i+1]
-            if type(commands[i+1]) != "int":
-                sys.stderr.write("Error! Bits following command do not code for 4 bit number.")
-                sys.exit()
+            b += int(commands[i+1])
+            #if type(commands[i+1]) != "int":
+            sys.stderr.write("Error! Bits following command do not code for 4 bit number.")
+            sys.exit()
         address+=1;       
     # MEMORY[i] 
 
@@ -143,7 +155,10 @@ def main():
     #ls = removeComments(str(sys.argv[1])) 
     ls = removeComments("loop.s")
     cmds = createListOfCommands(ls)
-    addToMemory(cmds)
+    print(cmds)
+    references = getReferences(cmds)
+    print(references)
+    addToMemory(cmds, references)
     print(MEMORY)
     #f = open(sys.argv[2], "wb")
     f = open("binaryTest.scram", "wb")
