@@ -1,0 +1,6 @@
+	LDA	4
+	ADD	5
+	STA	4
+	JMP	0
+	DAT	0
+	DAT	1
