@@ -51,6 +51,7 @@ def removeComments(fileName):
 
 
 def getReferences(commands):
+    """If a command has DAT after it, stores it in an address"""
     references = {}
     for i in range(len(commands)):
         if ":" in commands[i]:
@@ -60,9 +61,9 @@ def getReferences(commands):
 
 
 def addToMemory(commands, references):
+    """Pretend we have an actual memory and add op codes/data to it"""
     global address
     address = 0
-    # print(bin(address & 0xff))
     encKeys = list(encoding.keys())
     for i in range(len(commands)):
         if address > 15:
@@ -75,19 +76,15 @@ def addToMemory(commands, references):
                 except:
                     sys.stderr.write("Error! Data not found!\n")
             else:
-                # MEMORY[address] = bin(address & 0xff)
                 references[commands[i].replace(":", "")] = address
                 address += 1
-            # What about case where label: address?
         elif commands[i] in encKeys and commands[i].upper() != "HLT":
-            # print(commands[i])   # # #
             b = encoding[commands[i]] & 0xf
             b = b << 4
             if (commands[i+1]+":") in list(references.keys()):
                 try:
                     b += int(references[(commands[i+1]+":")]) & 0xff
                     MEMORY[address] = bin(b)
-                    # print(bin(b))   # # #
                     i += 1
                     address += 1
                 except:
@@ -97,7 +94,6 @@ def addToMemory(commands, references):
                 try:
                     b += references[commands[i+1]] & 0xff
                     MEMORY[address] = bin(b)
-                    # print(bin(b))    # # #
                     i += 1
                     address += 1
                 except:
@@ -107,7 +103,7 @@ def addToMemory(commands, references):
                 try:
                     if int(commands[i+1]) < 15:
                         b += int(commands[i+1]) & 0xf
-                        MEMORY[address] = bin(b) # bin(int(commands[i+1]) & 0xf)
+                        MEMORY[address] = bin(b)
                         i += 1
                         address += 1
                     else:
@@ -118,11 +114,10 @@ def addToMemory(commands, references):
         elif commands[i].upper() == "HLT":
             b = encoding["HLT"] << 4
             MEMORY[address] = bin(b)
-            # print("HLT recognized")   # # #
             address += 1
         elif commands[i].upper() == "DAT":
             try:
-                if int(commands[i+1]) < 2^8-1:
+                if int(commands[i+1]) < 2 ^ 8 - 1:
                     MEMORY[address] = bin(int(commands[i+1]) & 0xff)
                     i += 1
                     address += 1
@@ -136,47 +131,24 @@ def addToMemory(commands, references):
                     if commands[i-1] not in list(encoding.keys()):
                         s = "Error! " + commands[i]
                         sys.stderr.write(s + " is unrecognized operation!\n")
-    # print(references)   # # #
 
 
 def main():
     """Write binary program from file input format it for SCRAM"""
     filename = sys.argv[-1]
-    # print(filename)
-    # ls = removeComments(str(sys.argv[1]))
+
+    # The first pass is to recognize commands and clean up the file
     ls = removeComments(filename)
-    # ls = removeComments("loop.z")
     cmds = createListOfCommands(ls)
-    # print(cmds)  # # #
     references = getReferences(cmds)
 
+    # The bulk of the processing is done here
     addToMemory(cmds, references)
-    # print(MEMORY)  # # #
-    """f = open(sys.argv[2], "wb")"""
-    f = open("binaryTest.scram", "wb")
-    # print("Type for MEMORY " + str(type(MEMORY[1])))
-    # print(address)  # # #
+
+    # Only print out the MEMORY if it's not part of a JMP/JMZ
     for i in range(0, address):
         if type(MEMORY[i]) is str:
             print(chr(int(MEMORY[i][2:], 2)), end="")
-        # sys.stdout.buffer.write(int(MEMORY[i][2:], 2))
-        # sys.stdout.buffer.write(chr(int(MEMORY[i][2:], 2)))
-        # print(bytes(int(MEMORY[i][2:], 2)))
-        # pickle.dump(int(MEMORY[i][2:], 2), f)
-        # print(MEMORY[i])
-        #pickle.dump(int(MEMORY[i][2:], 2), f) 
-        # print(type(bin(MEMORY[i])))
-         # print(chr(MEMORY[i]))
-        # sys.stdout.buffer.write(int(MEMORY[i]) & 0xffff)
-         # f.write(bytes(MEMORY[i]))
-    """#print(bin(address & 0xff))
-        #temp = int(i, 2)
-        #print(temp)
-        #f.write(bytes(temp))
-    #for i in range(0, len(MEMORY)):
-    #    if str(type(MEMORY[i])) == "bytes":
-    #        f.write(bytes(MEMORY[i]))"""
-    f.close()
 
 
 if __name__ == "__main__":
