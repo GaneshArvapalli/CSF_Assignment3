@@ -81,6 +81,7 @@ def addToMemory(commands, references):
                 MEMORY[address] = bin(address & 0xff)
                 references[commands[i].replace(":", "")] = address
                 address += 1
+            # What about case where label: address?
         elif commands[i] in encKeys and commands[i].upper() != "HLT":
             print(commands[i])   # # #
             b = encoding[commands[i]] & 0xf
@@ -91,6 +92,7 @@ def addToMemory(commands, references):
                     MEMORY[address] = bin(b)
                     print(bin(b))   # # #
                     i += 1
+                    address += 1
                 except:
                     s = "Error! " + commands[i+1]
                     sys.stderr.write(s + " address not found!\n")
@@ -100,26 +102,37 @@ def addToMemory(commands, references):
                     MEMORY[address] = bin(b)
                     print(bin(b))    # # #
                     i += 1
+                    address += 1
                 except:
                     s = "Error! " + commands[i+1]
                     sys.stderr.write(s + " address not found!\n")
             else:
                 try:
                     if int(commands[i+1]) < 15:
-                        MEMORY[address] = bin(int(commands[i+1]) & 0xf)
+                        b += int(commands[i+1]) & 0xf
+                        MEMORY[address] = bin(b) # bin(int(commands[i+1]) & 0xf)
                         i += 1
+                        address += 1
                     else:
                         sys.stderr.write("Error! Data longer than 4 bits!\n")
                 except:
                     s = "Error! Op code not followed by int/address!\n"
                     sys.stderr.write(s)
-            address += 1
         elif commands[i].upper() == "HLT":
-            MEMORY[address] = bin(encoding["HLT"]) << 4
+            b = encoding["HLT"] << 4
+            MEMORY[address] = bin(b)
             print("HLT recognized")   # # #
             address += 1
         elif commands[i].upper() == "DAT":
-            i += 1
+            try:
+                if int(commands[i+1]) < 2^8-1:
+                    MEMORY[address] = bin(int(commands[i+1]) & 0xff)
+                    i += 1
+                    address += 1
+                else:
+                    sys.stderr.write("Error! DAT not followed by 8-bit int!")
+            except:
+                sys.stderr.write("Error! DAT not followed by int!")
         elif (commands[i]+":") not in list(references.keys()):
             if commands[i] not in list(references.keys()):
                 if i-1 > 0 and commands[i-1].upper() != "DAT":
@@ -143,7 +156,8 @@ def main():
     f = open("binaryTest.scram", "wb")
     print(address)
     for i in range(0, address):
-        f.write(bytes(MEMORY[i]))
+        # sys.stdout.buffer.write(int(MEMORY[i]) & 0xffff)
+         f.write(bytes(MEMORY[i]))
     """#print(bin(address & 0xff))
         #temp = int(i, 2)
         #print(temp)
