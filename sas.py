@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 
-# scram.py - Really simple virtual machine for binary .scram files.
+# sas.py - Really simple virtual machine for binary .scram files.
 #
-# Hacked by Ganesh Arvapalli <garvapa1@jhu.edu> for
-# 600.233: Computer Systems Fundamentals, Fall 2012.
-# Ported to Python 3, Summer 2016.
+# Ganesh Arvapalli <garvapa1@jhu.edu>
+# 600.233: Computer Systems Fundamentals, Fall 2016.
 #
 # Usage: python3 sas.py < input.s > output.scram
 #
 # Reads an instruction file representing SCRAM
 # standard input. This file can be at *most* 16 bytes long since we
 # only have 16 bytes of memory available.
-#
-# The SCRAM starts running code at address 0. After each and every
-# instruction, all of main memory as well as AC and PC is dumped to
-# standard output.
 
 import sys
 
@@ -35,18 +30,17 @@ SIZE = 16
 # content of main memory, we load the binary program here
 MEMORY = [0x00 for _ in range(SIZE)]
 
-MAX = None  # maximum # of instructions to execute
-
 
 def createListOfCommands(lines):
-    """strips unnecessary whitespace and new lines and returns list of commands"""
+    """strips unnecessary whitespace and returns list of commands"""
     bigList = []
     for j in range(0, len(lines)):
         tempList = lines[j].split("\t")
         tempList = [cmd for line in tempList for cmd in line.split("\n")]
-        tempList = [cmd for line in tempList for cmd in line.split()] 
+        tempList = [cmd for line in tempList for cmd in line.split()]
         bigList.append(tempList)
-    bigList = [cmd for sublist in bigList for cmd in sublist] #flattens the array
+    # next we flatten the array
+    bigList = [cmd for sublist in bigList for cmd in sublist]
     return bigList
 
 
@@ -60,89 +54,105 @@ def removeComments(fileName):
 
 
 def getReferences(commands):
-    references = {} 
+    references = {}
     for i in range(len(commands)):
         if ":" in commands[i]:
-            if i + 2 < len(commands) and commands[i+1].upper() == "DAT": 
+            if i + 2 < len(commands) and commands[i+1].upper() == "DAT":
                 references[commands[i]] = commands[i+2]
     return references
 
 
 def addToMemory(commands, references):
+    global address
     address = 0
-    #print(bin(address & 0xff))
+    # print(bin(address & 0xff))
+    encKeys = list(encoding.keys())
     for i in range(len(commands)):
         if address > 15:
             sys.stderr.write("Memory out of space. Ending program early...\n")
             break
         if ":" in commands[i]:
-            if i + 1 < len(commands) and "DAT".lower() == commands[i+1].lower():
+            if i + 1 < len(commands) and "DAT" == commands[i+1].upper():
                 try:
                     MEMORY[address] = bin(int(commands[i+2]))
                 except:
                     sys.stderr.write("Error! Data not found!\n")
             else:
                 MEMORY[address] = bin(address & 0xff)
-                references[commands[i].replace(":", "")] = bin(address & 0xff)
-        #elif commands[i].upper() == "LDA" or commands[i].upper() == "LDI":
-        elif commands[i] in list(encoding.keys()) and commands[i].upper() != "HLT":
-            print(commands[i])
+                references[commands[i].replace(":", "")] = address
+                address += 1
+        elif commands[i] in encKeys and commands[i].upper() != "HLT":
+            print(commands[i])   # # #
             b = encoding[commands[i]] & 0xf
             b = b << 4
-            if (commands[i+1]+":") in list(references.keys()): 
+            if (commands[i+1]+":") in list(references.keys()):
                 try:
                     b += int(references[(commands[i+1]+":")]) & 0xff
                     MEMORY[address] = bin(b)
-                    print(bin(b))
+                    print(bin(b))   # # #
                     i += 1
                 except:
-                    sys.stderr.write("Error! Address for " + commands[i+1] + " not found!\n")
-            elif str(type(commands[i+1])) == "int":
+                    s = "Error! " + commands[i+1]
+                    sys.stderr.write(s + " address not found!\n")
+            elif commands[i+1] in list(references.keys()):
+                try:
+                    b += references[commands[i+1]] & 0xff
+                    MEMORY[address] = bin(b)
+                    print(bin(b))    # # #
+                    i += 1
+                except:
+                    s = "Error! " + commands[i+1]
+                    sys.stderr.write(s + " address not found!\n")
+            else:
                 try:
                     if int(commands[i+1]) < 15:
-                        MEMORY[address] = bin(int(commands[i+1]) & 0xff)
-                        i+=1
+                        MEMORY[address] = bin(int(commands[i+1]) & 0xf)
+                        i += 1
                     else:
                         sys.stderr.write("Error! Data longer than 4 bits!\n")
                 except:
-                    sys.stderr.write("Error! Op code not followed by int or address!\n")
-            address+=1
+                    s = "Error! Op code not followed by int/address!\n"
+                    sys.stderr.write(s)
+            address += 1
         elif commands[i].upper() == "HLT":
             MEMORY[address] = bin(encoding["HLT"]) << 4
-            print("HLT recognized")
-            address+=1
+            print("HLT recognized")   # # #
+            address += 1
         elif commands[i].upper() == "DAT":
-            i+=1
+            i += 1
         elif (commands[i]+":") not in list(references.keys()):
             if commands[i] not in list(references.keys()):
                 if i-1 > 0 and commands[i-1].upper() != "DAT":
-                    sys.stderr.write("Error! " + commands[i] + " is an unrecognizable operation!\n")
+                    if commands[i-1] not in list(encoding.keys()):
+                        s = "Error! " + commands[i]
+                        sys.stderr.write(s + " is unrecognized operation!\n")
+    print(references)   # # #
 
 
 def main():
     """Write binary program from file input format it for SCRAM"""
-    #ls = removeComments(str(sys.argv[1]))
-    ls = removeComments("loop.s")
+    """ls = removeComments(str(sys.argv[1]))"""
+    ls = removeComments("loop.z")
     cmds = createListOfCommands(ls)
     print(cmds)
     references = getReferences(cmds)
-    print(references)
+
     addToMemory(cmds, references)
     print(MEMORY)
-    #f = open(sys.argv[2], "wb")
+    """f = open(sys.argv[2], "wb")"""
     f = open("binaryTest.scram", "wb")
-    for i in MEMORY:
-        print(type(i))
-        temp = int(i, 2)
-        print(temp)
+    print(address)
+    for i in range(0, address):
+        f.write(bytes(MEMORY[i]))
+    """#print(bin(address & 0xff))
+        #temp = int(i, 2)
+        #print(temp)
         #f.write(bytes(temp))
     #for i in range(0, len(MEMORY)):
     #    if str(type(MEMORY[i])) == "bytes":
-    #        f.write(bytes(MEMORY[i]))
+    #        f.write(bytes(MEMORY[i]))"""
     f.close()
 
-    """for i in range(len(binary)):
-        MEMORY[i] = int(binary[i]) & 0xff
-    """
+
 if __name__ == "__main__":
     main()
