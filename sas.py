@@ -36,17 +36,10 @@ SIZE = 16
 MEMORY = [0x00 for _ in range(SIZE)]
 
 MAX = None  # maximum # of instructions to execute
-IC = 0  # instruction counter
-
-
-#if len(sys.argv) > 1:
-#    MAX = int(sys.argv[1])
 
 
 def createListOfCommands(lines):
     """strips unnecessary whitespace and new lines and returns list of commands"""
-    print(lines)
-    print("-------------------------")
     bigList = []
     for j in range(0, len(lines)):
         tempList = lines[j].split("\t")
@@ -123,7 +116,7 @@ def getReferences(commands):
     references = {} 
     for i in range(len(commands)):
         if ":" in commands[i]:
-            if i+1 < len(commands) and commands[i+1] == "DAT":
+            if i + 2 < len(commands) and commands[i+1].upper() == "DAT":
                  references[commands[i]] = commands[i+2]
     return references
 
@@ -132,27 +125,49 @@ def addToMemory(commands, references):
     address = 0
     #print(bin(address & 0xff))
     for i in range(len(commands)):
+        if address > 15:
+            sys.stderr.write("Memory out of space. Ending program early...\n")
+            break
         if ":" in commands[i]:
-            if i + 1 < len(commands) and "DAT" == commands[i+1]:
+            if i + 1 < len(commands) and "DAT".lower() == commands[i+1].lower():
                 try:
-                    MEMORY[address] = commands[i+2]
+                    MEMORY[address] = bin(int(commands[i+2]))
                 except:
-                    sys.stderr.write("Error! Memory cannot be written to!")
+                    sys.stderr.write("Error! Data not found!\n")
             else:
-                MEMORY[address] = address & 0xffff
-        elif commands[i] == "LDA":
-            b = encoding[commands[i]] & 0xff
+                MEMORY[address] = bin(address & 0xffffffff)
+                references[commands[i]] = bin(address & 0xffffffff)
+        #elif commands[i].upper() == "LDA" or commands[i].upper() == "LDI":
+        elif commands[i] in list(encoding.keys()) and commands[i].upper() != "HLT":
+            b = encoding[commands[i]] & 0xffff
             b = b << 4
-            b += int(commands[i+1])
-            #if type(commands[i+1]) != "int":
-            sys.stderr.write("Error! Bits following command do not code for 4 bit number.")
-            sys.exit()
-        address+=1;       
-    # MEMORY[i] 
+            if str(type(commands[i+1])) == "str": 
+                try:
+                    b += int(references[commands[i+1]]) & 0xffff
+                    MEMORY[address] = bin(b)
+                    i += 1
+                except:
+                    sys.stderr.write("Error! Address for " + commands[i+1] + " not found!\n")
+            elif str(type(commands[i+1])) == "int":
+                try:
+                    if int(commands[i+1]) < 15:
+                        MEMORY[address] = bin(int(commands[i+1]) & 0xffff)
+                    else:
+                        sys.stderr.write("Error! Data longer than 4 bits!\n")
+                except:
+                    sys.stderr.write("Error! Op code not followed by int or address!\n")
+        elif commands[i].upper() == "HLT":
+            print("HLT recognized")
+        elif commands[i].upper() == "DAT":
+            i+=1
+            print(1)
+        elif commands[i] not in list(references.keys()):
+            sys.stderr.write("Error! " + commands[i] + " is an unrecognizable operation!\n")
+        address+=1
 
 def main():
     """Write binary program from file input format it for SCRAM"""
-    #ls = removeComments(str(sys.argv[1])) 
+    #ls = removeComments(str(sys.argv[1]))
     ls = removeComments("loop.s")
     cmds = createListOfCommands(ls)
     print(cmds)
@@ -162,8 +177,9 @@ def main():
     print(MEMORY)
     #f = open(sys.argv[2], "wb")
     f = open("binaryTest.scram", "wb")
-#    for i in range(0, len(MEMORY)):
-#        f.write(bytes(MEMORY[i].encode()))
+    for i in range(0, len(MEMORY)):
+        print(type(MEMORY[i]))
+        f.write(bytes(MEMORY[i]))
     f.close()
 
     """if len(binary) > SIZE:
@@ -175,7 +191,6 @@ def main():
         MEMORY[i] = int(binary[i]) & 0xff
 
     run()"""
-
 
 if __name__ == "__main__":
     main()
