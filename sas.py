@@ -5,7 +5,7 @@
 # Ganesh Arvapalli <garvapa1@jhu.edu>
 # 600.233: Computer Systems Fundamentals, Fall 2016.
 #
-# Usage: python3 sas.py < input.s > output.scram
+# Usage: python3 sas.py input.s > output.scram
 #
 # Reads an instruction file representing SCRAM
 # standard input. This file can be at *most* 16 bytes long since we
@@ -19,9 +19,6 @@ encoding = {
     "STA": 0b0011, "STI": 0b0100, "ADD": 0b0101,
     "SUB": 0b0110, "JMP": 0b0111, "JMZ": 0b1000,
 }
-
-# reverse mapping from bit patterns to SCRAM instructions
-decoding = dict([[v, k] for k, v in encoding.items()])
 
 
 # size of main memory in bytes
@@ -78,19 +75,19 @@ def addToMemory(commands, references):
                 except:
                     sys.stderr.write("Error! Data not found!\n")
             else:
-                MEMORY[address] = bin(address & 0xff)
+                # MEMORY[address] = bin(address & 0xff)
                 references[commands[i].replace(":", "")] = address
                 address += 1
             # What about case where label: address?
         elif commands[i] in encKeys and commands[i].upper() != "HLT":
-            print(commands[i])   # # #
+            # print(commands[i])   # # #
             b = encoding[commands[i]] & 0xf
             b = b << 4
             if (commands[i+1]+":") in list(references.keys()):
                 try:
                     b += int(references[(commands[i+1]+":")]) & 0xff
                     MEMORY[address] = bin(b)
-                    print(bin(b))   # # #
+                    # print(bin(b))   # # #
                     i += 1
                     address += 1
                 except:
@@ -100,7 +97,7 @@ def addToMemory(commands, references):
                 try:
                     b += references[commands[i+1]] & 0xff
                     MEMORY[address] = bin(b)
-                    print(bin(b))    # # #
+                    # print(bin(b))    # # #
                     i += 1
                     address += 1
                 except:
@@ -121,7 +118,7 @@ def addToMemory(commands, references):
         elif commands[i].upper() == "HLT":
             b = encoding["HLT"] << 4
             MEMORY[address] = bin(b)
-            print("HLT recognized")   # # #
+            # print("HLT recognized")   # # #
             address += 1
         elif commands[i].upper() == "DAT":
             try:
@@ -139,25 +136,39 @@ def addToMemory(commands, references):
                     if commands[i-1] not in list(encoding.keys()):
                         s = "Error! " + commands[i]
                         sys.stderr.write(s + " is unrecognized operation!\n")
-    print(references)   # # #
+    # print(references)   # # #
 
 
 def main():
     """Write binary program from file input format it for SCRAM"""
-    """ls = removeComments(str(sys.argv[1]))"""
-    ls = removeComments("loop.z")
+    filename = sys.argv[-1]
+    # print(filename)
+    # ls = removeComments(str(sys.argv[1]))
+    ls = removeComments(filename)
+    # ls = removeComments("loop.z")
     cmds = createListOfCommands(ls)
-    print(cmds)
+    # print(cmds)  # # #
     references = getReferences(cmds)
 
     addToMemory(cmds, references)
-    print(MEMORY)
+    # print(MEMORY)  # # #
     """f = open(sys.argv[2], "wb")"""
     f = open("binaryTest.scram", "wb")
-    print(address)
+    # print("Type for MEMORY " + str(type(MEMORY[1])))
+    # print(address)  # # #
     for i in range(0, address):
+        if type(MEMORY[i]) is str:
+            print(chr(int(MEMORY[i][2:], 2)), end="")
+        # sys.stdout.buffer.write(int(MEMORY[i][2:], 2))
+        # sys.stdout.buffer.write(chr(int(MEMORY[i][2:], 2)))
+        # print(bytes(int(MEMORY[i][2:], 2)))
+        # pickle.dump(int(MEMORY[i][2:], 2), f)
+        # print(MEMORY[i])
+        #pickle.dump(int(MEMORY[i][2:], 2), f) 
+        # print(type(bin(MEMORY[i])))
+         # print(chr(MEMORY[i]))
         # sys.stdout.buffer.write(int(MEMORY[i]) & 0xffff)
-         f.write(bytes(MEMORY[i]))
+         # f.write(bytes(MEMORY[i]))
     """#print(bin(address & 0xff))
         #temp = int(i, 2)
         #print(temp)
