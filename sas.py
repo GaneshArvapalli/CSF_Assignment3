@@ -59,65 +59,12 @@ def removeComments(fileName):
     return lines
 
 
-def upper(b):
-    """Return upper four bits of byte b."""
-    return (b >> 4) & 0x0f
-
-
-def lower(b):
-    """Return lower four bits of byte b."""
-    return b & 0x0f
-
-
-def run():
-    """Run the SCRAM until we're done."""
-    global AC, PC, IC
-    while True:
-        dump()
-        inst = MEMORY[PC]
-        PC += 1
-
-        code = upper(inst)
-        addr = lower(inst)
-
-        if decoding[code] == "HLT":
-            print("HLT encountered @", PC-1)
-            break
-        elif decoding[code] == "LDA":
-            AC = MEMORY[addr]
-        elif decoding[code] == "LDI":
-            t = MEMORY[addr] & 0x0f
-            AC = MEMORY[t]
-        elif decoding[code] == "STA":
-            MEMORY[addr] = AC
-        elif decoding[code] == "STI":
-            t = MEMORY[addr] & 0x0f
-            MEMORY[t] = AC
-        elif decoding[code] == "ADD":
-            AC = (AC + MEMORY[addr]) & 0xff
-        elif decoding[code] == "SUB":
-            AC = (AC - MEMORY[addr]) & 0xff
-        elif decoding[code] == "JMP":
-            PC = addr
-        elif decoding[code] == "JMZ":
-            if AC == 0:
-                PC = addr
-        else:
-            print("illegal instruction encountered @", PC-1)
-            break
-
-        IC += 1
-        if MAX and IC >= MAX:
-            print("maximum number of instructions reached")
-            break
-
-
 def getReferences(commands):
     references = {} 
     for i in range(len(commands)):
         if ":" in commands[i]:
-            if i + 2 < len(commands) and commands[i+1].upper() == "DAT":
-                 references[commands[i]] = commands[i+2]
+            if i + 2 < len(commands) and commands[i+1].upper() == "DAT": 
+                references[commands[i]] = commands[i+2]
     return references
 
 
@@ -135,35 +82,42 @@ def addToMemory(commands, references):
                 except:
                     sys.stderr.write("Error! Data not found!\n")
             else:
-                MEMORY[address] = bin(address & 0xffffffff)
-                references[commands[i]] = bin(address & 0xffffffff)
+                MEMORY[address] = bin(address & 0xff)
+                references[commands[i].replace(":", "")] = bin(address & 0xff)
         #elif commands[i].upper() == "LDA" or commands[i].upper() == "LDI":
         elif commands[i] in list(encoding.keys()) and commands[i].upper() != "HLT":
-            b = encoding[commands[i]] & 0xffff
+            print(commands[i])
+            b = encoding[commands[i]] & 0xf
             b = b << 4
-            if str(type(commands[i+1])) == "str": 
+            if (commands[i+1]+":") in list(references.keys()): 
                 try:
-                    b += int(references[commands[i+1]]) & 0xffff
+                    b += int(references[(commands[i+1]+":")]) & 0xff
                     MEMORY[address] = bin(b)
+                    print(bin(b))
                     i += 1
                 except:
                     sys.stderr.write("Error! Address for " + commands[i+1] + " not found!\n")
             elif str(type(commands[i+1])) == "int":
                 try:
                     if int(commands[i+1]) < 15:
-                        MEMORY[address] = bin(int(commands[i+1]) & 0xffff)
+                        MEMORY[address] = bin(int(commands[i+1]) & 0xff)
+                        i+=1
                     else:
                         sys.stderr.write("Error! Data longer than 4 bits!\n")
                 except:
                     sys.stderr.write("Error! Op code not followed by int or address!\n")
+            address+=1
         elif commands[i].upper() == "HLT":
+            MEMORY[address] = bin(encoding["HLT"]) << 4
             print("HLT recognized")
+            address+=1
         elif commands[i].upper() == "DAT":
             i+=1
-            print(1)
-        elif commands[i] not in list(references.keys()):
-            sys.stderr.write("Error! " + commands[i] + " is an unrecognizable operation!\n")
-        address+=1
+        elif (commands[i]+":") not in list(references.keys()):
+            if commands[i] not in list(references.keys()):
+                if i-1 > 0 and commands[i-1].upper() != "DAT":
+                    sys.stderr.write("Error! " + commands[i] + " is an unrecognizable operation!\n")
+
 
 def main():
     """Write binary program from file input format it for SCRAM"""
@@ -177,20 +131,18 @@ def main():
     print(MEMORY)
     #f = open(sys.argv[2], "wb")
     f = open("binaryTest.scram", "wb")
-    for i in range(0, len(MEMORY)):
-        print(type(MEMORY[i]))
-        f.write(bytes(MEMORY[i]))
+    for i in MEMORY:
+        print(type(i))
+        temp = int(i, 2)
+        print(temp)
+        #f.write(bytes(temp))
+    #for i in range(0, len(MEMORY)):
+    #    if str(type(MEMORY[i])) == "bytes":
+    #        f.write(bytes(MEMORY[i]))
     f.close()
 
-    """if len(binary) > SIZE:
-        print("Program too long, truncated from {:d} to {:d} bytes.".format(
-            len(binary), SIZE))
-        binary = binary[:SIZE]
-
-    for i in range(len(binary)):
+    """for i in range(len(binary)):
         MEMORY[i] = int(binary[i]) & 0xff
-
-    run()"""
-
+    """
 if __name__ == "__main__":
     main()
