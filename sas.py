@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# sas.py - Really simple virtual machine for binary .scram files.
+# sas.py - Code to byte assembler for SCRAM.
 #
 # Ganesh Arvapalli <garvapa1@jhu.edu>
 # 600.233: Computer Systems Fundamentals, Fall 2016.
@@ -8,8 +8,7 @@
 # Usage: python3 sas.py input.s > output.scram
 #
 # Reads an instruction file representing SCRAM
-# standard input. This file can be at *most* 16 bytes long since we
-# only have 16 bytes of memory available.
+# standard input with op codes and data.
 
 import sys
 

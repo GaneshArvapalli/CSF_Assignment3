@@ -1,0 +1,15 @@
+Ganesh Arvapalli    garvapa1@jhu.edu
+----------------------------------------
+
+
+Part 2:
+----------------------------------------
+sas.py is a program designed to convert "human-readable SCRAM" into "machine-readable SCRAM".
+In other words, it is an assembler that takes code and turns it into bytes that are then
+run by the scram.py program. The dis.py program takes byte data and turns it back into readable
+code. In general, a sample code line should be in the format "label: OPCODE address     #comment".
+The OPCODEs include the ones on the slides as well as DAT, which means that the address is
+actually a 4-bit integer. To read the actual bytes output, use xxd output.scram.
+
+To run sas.py:
+    python3 sas.py input.s > output.scram
